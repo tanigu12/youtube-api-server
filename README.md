@@ -45,7 +45,12 @@ A FastAPI-based server providing API endpoints for extracting and processing You
 
 5. Run the server:
    ```bash
-   python -m app.main
+   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+   
+   Alternative method:
+   ```bash
+   python run.py
    ```
 
 ### Using Docker
@@ -139,6 +144,65 @@ Response:
   "0:05 - Next caption",
   "0:10 - Another caption"
 ]
+```
+
+## Testing
+
+### Test the API with curl
+
+1. **Start the server** (in one terminal):
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+2. **Test video captions endpoint**:
+   ```bash
+   curl -X POST http://localhost:8000/youtube/video-captions \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url": "https://www.youtube.com/watch?v=4AwyVTHEU3s",
+       "languages": ["en"]
+     }'
+   ```
+
+3. **Test video timestamps endpoint**:
+   ```bash
+   curl -X POST http://localhost:8000/youtube/video-timestamps \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url": "https://www.youtube.com/watch?v=4AwyVTHEU3s",
+       "languages": ["en"]
+     }'
+   ```
+
+4. **Test video metadata endpoint**:
+   ```bash
+   curl -X POST http://localhost:8000/youtube/video-data \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url": "https://www.youtube.com/watch?v=4AwyVTHEU3s"
+     }'
+   ```
+
+### Test with Python
+
+```python
+from app.utils.youtube_tools import YouTubeTools
+
+# Test transcript functionality
+test_url = 'https://www.youtube.com/watch?v=4AwyVTHEU3s'
+
+# Get captions
+captions = YouTubeTools.get_video_captions(test_url, ['en'])
+print(f"Captions: {captions[:200]}...")
+
+# Get timestamps
+timestamps = YouTubeTools.get_video_timestamps(test_url, ['en'])
+print(f"First 3 timestamps: {timestamps[:3]}")
+
+# Get video metadata
+metadata = YouTubeTools.get_video_data(test_url)
+print(f"Video title: {metadata['title']}")
 ```
 
 ## Project Structure

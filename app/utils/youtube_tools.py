@@ -4,7 +4,7 @@ from urllib.request import urlopen
 from typing import Optional, List
 
 from fastapi import HTTPException
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
 
 class YouTubeTools:
     @staticmethod
@@ -77,17 +77,22 @@ class YouTubeTools:
             raise HTTPException(status_code=400, detail="Error getting video ID from URL")
 
         try:
-            captions = None
-            if languages:
-                captions = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
-            else:
-                captions = YouTubeTranscriptApi.get_transcript(video_id)
+            ytt_api = YouTubeTranscriptApi()
             
+            if languages:
+                captions = ytt_api.fetch(video_id, languages=languages)
+            else:
+                captions = ytt_api.fetch(video_id)
+
             if captions:
-                return " ".join(line["text"] for line in captions)
+                return " ".join(line.text for line in captions)
             return "No captions found for video"
+        except NoTranscriptFound:
+            detail = "No captions available for this video"
+            raise HTTPException(status_code=404, detail=detail)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error getting captions for video: {str(e)}")
+            detail = f"Error getting captions for video: {str(e)}"
+            raise HTTPException(status_code=500, detail=detail)
 
     @staticmethod
     def get_video_timestamps(url: str, languages: Optional[List[str]] = None) -> List[str]:
@@ -103,12 +108,22 @@ class YouTubeTools:
             raise HTTPException(status_code=400, detail="Error getting video ID from URL")
 
         try:
-            captions = YouTubeTranscriptApi.get_transcript(video_id, languages=languages or ["en"])
+            ytt_api = YouTubeTranscriptApi()
+            
+            if languages:
+                captions = ytt_api.fetch(video_id, languages=languages)
+            else:
+                captions = ytt_api.fetch(video_id)
+
             timestamps = []
             for line in captions:
-                start = int(line["start"])
+                start = int(line.start)
                 minutes, seconds = divmod(start, 60)
-                timestamps.append(f"{minutes}:{seconds:02d} - {line['text']}")
+                timestamps.append(f"{minutes}:{seconds:02d} - {line.text}")
             return timestamps
+        except NoTranscriptFound:
+            detail = "No captions available for this video"
+            raise HTTPException(status_code=404, detail=detail)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error generating timestamps: {str(e)}")
+            detail = f"Error generating timestamps: {str(e)}"
+            raise HTTPException(status_code=500, detail=detail)
